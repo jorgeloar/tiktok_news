@@ -186,7 +186,8 @@ import React, { useState } from 'react';
               <div className="flex items-center gap-5 bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-xl">
                  <div className="h-16 w-16 overflow-hidden rounded-xl shadow-lg border-2 border-[#F9DD0D] bg-black">
                      <img 
-                       src="/logo.jpg" 
+                       src="/logo.png
+                         " 
                        alt="Logo" 
                        className="h-full w-full object-contain"
                        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/200x200/000000/F9DD0D?text=C"; }}
