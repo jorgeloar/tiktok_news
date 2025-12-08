@@ -126,7 +126,7 @@ INPUTS:
     try {
       // 2. OBTENER URL SEGURA
       // Eliminamos la URL fija y leemos directo de la variable de entorno
-      const webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK_URL;
+      const webhookUrl = 'https://hook.eu2.make.com/l40okkc6x4l4y9kvmlpadutz9iswpaoz';
 
       if (!webhookUrl) {
         throw new Error('Falta la configuración VITE_MAKE_WEBHOOK_URL en Vercel');
