@@ -111,7 +111,9 @@ INPUTS:
   };
 
   // --- LÓGICA PARA MAKE / OPENAI ---
+  // --- LÓGICA PARA MAKE / OPENAI ---
   const generateScript = async () => {
+    // 1. Validaciones (Mantenemos las tuyas)
     if (!formData.url || (!formData.protagonista && formData.relevancia > 0) || !formData.audiencia) {
       setError('Por favor completa la Noticia, la Audiencia y el Protagonista.');
       return;
@@ -120,14 +122,48 @@ INPUTS:
     setLoading(true);
     setError('');
     setGeneratedScript('');
-    
-    // Obtener URL del Webhook
-    let webhookUrl = '';
-    try { 
-        webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK_URL; 
-    } catch (e) { webhookUrl = ''; }
 
-    if (!webhookUrl || webhookUrl === "") {
+    try {
+      // 2. OBTENER URL SEGURA
+      // Eliminamos la URL fija y leemos directo de la variable de entorno
+      const webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK_URL;
+
+      if (!webhookUrl) {
+        throw new Error('Falta la configuración VITE_MAKE_WEBHOOK_URL en Vercel');
+      }
+
+      // 3. ENVIAR DATOS A MAKE
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Enviamos el estado formData que ya tienes definido en tu componente
+        body: JSON.stringify(formData), 
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al conectar con el servidor de IA');
+      }
+
+      // 4. RECIBIR RESPUESTA
+      const data = await response.json();
+      
+      // IMPORTANTE: Asegúrate de que Make devuelva un JSON con la propiedad "text"
+      // Ejemplo de respuesta de Make: { "text": "Guion generado..." }
+      if (data.text) {
+        setGeneratedScript(data.text);
+      } else {
+        throw new Error('La respuesta de la IA no tiene el formato esperado.');
+      }
+
+    } catch (error) {
+      console.error(error);
+      setError(error.message || 'Hubo un error generando el guion.');
+    } finally {
+      setLoading(false);
+    }
+  };
         setError('Falta la URL del Webhook. Configura VITE_MAKE_WEBHOOK_URL en Vercel.');
         setLoading(false);
         return;
