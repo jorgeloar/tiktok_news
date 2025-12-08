@@ -89,7 +89,7 @@ INPUTS:
     setGeneratedScript('');
 
     try {
-      // 2. URL DEL WEBHOOK (Directa para probar, luego cambiarás a variable de entorno)
+      // 2. URL DEL WEBHOOK (Directa para probar)
       const webhookUrl = 'https://hook.eu2.make.com/l40okkc6x4l4y9kvmlpadutz9iswpaoz';
 
       // 3. ENVIAR DATOS A MAKE
