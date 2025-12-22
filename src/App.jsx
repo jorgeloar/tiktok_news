@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Copy, RefreshCw, FileText, CheckCircle, Video, User, MessageSquare, Target, Newspaper, AlertTriangle, Sparkles, Sliders, Zap, Ghost, Eye, Users, Star } from 'lucide-react';
+// IMPORTANTE: Usamos 'Users' en lugar de 'Handshake' para evitar errores de versión en Vercel
+import { Copy, RefreshCw, FileText, CheckCircle, Video, User, MessageSquare, Target, Newspaper, AlertTriangle, Sparkles, Sliders, Zap, Ghost, Eye, Users, Star, Settings } from 'lucide-react';
 
 const UgcScriptGenerator = () => {
   const [formData, setFormData] = useState({
@@ -16,13 +17,17 @@ const UgcScriptGenerator = () => {
   const [error, setError] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Tu Webhook de Make (Configurado por defecto)
+  const DEFAULT_WEBHOOK = "https://hook.eu2.make.com/c5s90k7am0gxc1286y64x0sxonidipzx";
+  const [manualWebhook, setManualWebhook] = useState(DEFAULT_WEBHOOK);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // UX VISUAL DEL SLIDER
+  // Lógica Visual del Slider de Intensidad
   const getRelevanceDetails = (val) => {
     const v = parseInt(val);
     if (v === 0) return {
@@ -45,7 +50,7 @@ const UgcScriptGenerator = () => {
     };
     if (v <= 7) return {
         label: "Relevancia clara",
-        icon: Users,
+        icon: Users, 
         desc: "Aparece activamente conectando el problema con la solución.",
         color: "text-[#8D36FF]",
         bg: "bg-violet-50",
@@ -63,22 +68,57 @@ const UgcScriptGenerator = () => {
     };
   };
 
-  // Muestra el prompt solo visualmente (Make construye el real)
+  // Constructor del Prompt (El cerebro de la App)
   const constructPrompt = () => {
+    const relevanceLevel = parseInt(formData.relevancia);
+    let protagonistInstruction = "";
+    
+    // Lógica de Intensidad traducida a Prompt
+    if (relevanceLevel === 0) {
+        protagonistInstruction = `3. REGLA DE EXCLUSIÓN: EL PROTAGONISTA (${formData.protagonista}) NO DEBE APARECER.\n   - Instrucción Crítica: Ignora cualquier mención al protagonista. El guion debe centrarse 100% en la noticia.`;
+    } else if (relevanceLevel <= 3) {
+        protagonistInstruction = `3. PRODUCT PLACEMENT SUTIL (Nivel ${relevanceLevel}/10): El [PROTAGONISTA] (${formData.protagonista}) NO es el héroe.\n   - Menciónalo de forma secundaria, casi invisible. REGLA: Máximo 1 mención rápida.`;
+    } else if (relevanceLevel <= 7) {
+        protagonistInstruction = `3. RELEVANCIA MODERADA (Nivel ${relevanceLevel}/10): El [PROTAGONISTA] (${formData.protagonista}) es el FACILITADOR clave.\n   - Conecta la noticia directamente con su gestión. REGLA: Puedes mencionarlo 2 veces.`;
+    } else {
+        protagonistInstruction = `3. RELEVANCIA ALTA (Nivel ${relevanceLevel}/10): El [PROTAGONISTA] (${formData.protagonista}) es el MOTOR del cambio.\n   - Destaca su LIDERAZGO contundente. La noticia ocurre GRACIAS a él/ella.`;
+    }
+
     return `
+# ROL
+Eres un experto Guionista de Videos UGC para TikTok/Reels. Transformas noticias en contenido viral NO POLÍTICO.
+
+# OBJETIVO
+Guion de 40-60s "Green Screen" comentando una noticia.
+
+# REGLAS
+1. FUENTE = AUTORIDAD.
+2. CERO LENGUAJE POLÍTICO (Voto, urna, candidato PROHIBIDOS).
+${protagonistInstruction}
+4. VISUALES: Describe qué se ve en pantalla verde.
+
+# ESTRUCTURA
+1. HOOK (0-5s)
+2. NOTICIA (5-15s)
+3. PROTAGONISTA (15-25s) (Nivel ${relevanceLevel}/10)
+4. BENEFICIO (25-35s)
+5. CTA (35-40s)
+
+# FORMATO DE SALIDA (Markdown Table)
+| TIEMPO | AUDIO (Voz casual) | VISUAL (Instrucciones) |
+
+---
 INPUTS:
 [NOTICIA]: ${formData.url}
 [MEDIO]: ${formData.medio || 'El medio indicado'}
 [PROTAGONISTA]: ${formData.protagonista}
 [AUDIENCIA]: ${formData.audiencia}
 [MENSAJE]: ${formData.mensajeClave}
-(El resto del prompt lo gestiona Make.com)
     `;
   };
 
-  // --- LÓGICA PARA MAKE / OPENAI ---
+  // Función de Envío a Make
   const generateScript = async () => {
-    // 1. Validaciones
     if (!formData.url || (!formData.protagonista && formData.relevancia > 0) || !formData.audiencia) {
       setError('Por favor completa la Noticia, la Audiencia y el Protagonista.');
       return;
@@ -87,38 +127,48 @@ INPUTS:
     setLoading(true);
     setError('');
     setGeneratedScript('');
+    
+    // Usamos el Webhook configurado manual o por defecto
+    const webhookUrl = manualWebhook || DEFAULT_WEBHOOK;
+
+    if (!webhookUrl) {
+        setError('Falta la URL del Webhook.');
+        setLoading(false);
+        return;
+    }
+
+    const finalPrompt = constructPrompt();
 
     try {
-      // 2. URL DEL WEBHOOK (Directa para probar)
-      const webhookUrl = 'https://hook.eu2.make.com/c5s90k7am0gxc1286y64x0sxonidipzx';
-
-      // 3. ENVIAR DATOS A MAKE
       const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData), 
-      });
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+              prompt: finalPrompt,
+              metadata: {
+                  usuario: "Web User",
+                  fecha: new Date().toISOString(),
+                  protagonista: formData.protagonista
+              }
+          }),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Error al conectar con el servidor de IA');
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
-
-      // 4. RECIBIR RESPUESTA
-      const data = await response.json();
       
-      // Verificamos que venga el texto
-      if (data.text) {
-        setGeneratedScript(data.text);
+      const text = await response.text();
+      
+      if (text && text.length > 0) {
+          setGeneratedScript(text);
       } else {
-        console.log("Respuesta recibida:", data);
-        throw new Error('La respuesta de la IA no tiene el formato esperado (falta campo text).');
+          throw new Error('Make recibió los datos pero no devolvió texto. Revisa el módulo "Webhook Response" en Make.');
       }
 
-    } catch (error) {
-      console.error(error);
-      setError(error.message || 'Hubo un error generando el guion.');
+    } catch (err) {
+      console.error(err);
+      setError(`Error de conexión: ${err.message}.`);
     } finally {
       setLoading(false);
     }
@@ -169,8 +219,9 @@ INPUTS:
           
           <button 
             onClick={() => setShowPrompt(!showPrompt)}
-            className="text-white/80 text-xs font-semibold bg-black/20 hover:bg-black/40 px-4 py-2 rounded-full transition-all backdrop-blur-sm border border-white/10"
+            className="text-white/80 text-xs font-semibold bg-black/20 hover:bg-black/40 px-4 py-2 rounded-full transition-all backdrop-blur-sm border border-white/10 flex items-center gap-2"
           >
+            <Settings size={14} />
             {showPrompt ? 'Ocultar Backend' : 'Modo Desarrollador'}
           </button>
         </div>
@@ -338,15 +389,27 @@ INPUTS:
                 </div>
             </div>
 
-            {/* Prompt Técnico */}
+            {/* Prompt Técnico y DEBUGGER */}
             {showPrompt && (
                 <div className="bg-slate-900 rounded-xl p-4 shadow-inner border border-slate-700 mt-4 overflow-hidden animate-in fade-in slide-in-from-top-4">
+                    {/* DEBUGGER DE WEBHOOK */}
+                    <div className="mb-4 pb-4 border-b border-slate-700">
+                        <label className="block text-[#F9DD0D] text-xs font-bold mb-1">🔌 Webhook Configurado</label>
+                        <input 
+                            type="text" 
+                            value={manualWebhook}
+                            onChange={(e) => setManualWebhook(e.target.value)}
+                            placeholder="https://hook..."
+                            className="w-full bg-black/50 text-slate-300 text-xs p-2 rounded border border-slate-600 focus:border-[#F9DD0D] outline-none"
+                        />
+                    </div>
+
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-mono text-[#F9DD0D]">backend_logic.txt</span>
                         <button onClick={() => handleCopy(constructPrompt())} className="text-slate-400 hover:text-white"><Copy size={12}/></button>
                     </div>
                     <pre className="text-[10px] font-mono text-slate-300 whitespace-pre-wrap max-h-40 overflow-y-auto custom-scrollbar">
-                            {constructPrompt()}
+                        {constructPrompt()}
                     </pre>
                 </div>
             )}
