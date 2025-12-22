@@ -90,7 +90,7 @@ INPUTS:
 
     try {
       // 2. URL DEL WEBHOOK (Directa para probar)
-      const webhookUrl = 'https://hook.eu2.make.com/l40okkc6x4l4y9kvmlpadutz9iswpaoz';
+      const webhookUrl = 'https://hook.eu2.make.com/6jvb8pk6z625zqbi4tfxn644tn8cx23d';
 
       // 3. ENVIAR DATOS A MAKE
       const response = await fetch(webhookUrl, {
