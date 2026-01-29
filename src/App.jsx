@@ -19,7 +19,7 @@ const UgcScriptGenerator = () => {
   const [copied, setCopied] = useState(false);
   
   // Tu Webhook de Make (Configurado por defecto)
-  const DEFAULT_WEBHOOK = "https://hook.eu2.make.com/ntnsv551dqcromn7qyvl4k1olqwybjh7";
+  const DEFAULT_WEBHOOK = "https://hook.eu2.make.com/nan85wl8u6clx8insgumztbbtblpwc6v";
   const [manualWebhook, setManualWebhook] = useState(DEFAULT_WEBHOOK);
 
   const handleInputChange = (e) => {
